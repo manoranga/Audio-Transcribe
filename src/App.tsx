@@ -1452,7 +1452,7 @@ export default function App() {
         <div className="flex items-center gap-4">
           <div className="relative">
             <div className="w-20 h-20 rounded-full flex items-center justify-center shadow-[0_15px_40px_rgba(0,0,0,0.7)] overflow-hidden bg-white/5 border border-spiritual-border/50 transition-all hover:scale-105">
-              <img src="/logo.jpg" alt="Mahaguru Dharma Logo" className="w-full h-full object-cover scale-[1.1]" />
+              <img src={`${import.meta.env.BASE_URL}logo.jpg`} alt="Mahaguru Dharma Logo" className="w-full h-full object-cover scale-[1.1]" />
             </div>
           </div>
           <div>
