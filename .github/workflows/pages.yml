@@ -29,9 +29,25 @@ jobs:
           node-version: '20'
           cache: 'npm'
       - run: npm ci
+      - name: Set Vite base path for GitHub Pages
+        run: |
+          NAME="${{ github.event.repository.name }}"
+          OWNER="${{ github.repository_owner }}"
+          if [ "$NAME" = "${OWNER}.github.io" ]; then
+            echo "User/org site at https://${OWNER}.github.io/ → base /"
+            echo "VITE_BASE_PATH=/" >> "$GITHUB_ENV"
+          else
+            echo "Project site at https://${OWNER}.github.io/${NAME}/ → base /${NAME}/"
+            echo "VITE_BASE_PATH=/${NAME}/" >> "$GITHUB_ENV"
+          fi
       - run: npm run build
-        env:
-          VITE_BASE_PATH: /${{ github.event.repository.name }}/
+      - name: Verify build (must not ship dev index.html)
+        run: |
+          if grep -q 'src/main.tsx' dist/index.html; then
+            echo "::error::dist/index.html still references /src/main.tsx — the Vite build did not run correctly."
+            exit 1
+          fi
+          echo "OK: dist/index.html uses hashed /assets bundle, not main.tsx"
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
