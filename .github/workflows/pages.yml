@@ -1,8 +1,12 @@
-# Serves the Vite build output from ./dist (built index.html references /assets/*.js, NOT /src/main.tsx).
+# Builds Vite to ./dist (index references /assets/*.js, never /src/main.tsx) and pushes that folder
+# to the gh-pages branch. GitHub Pages must serve THAT branch, not main.
 #
-# In the repo: Settings → Pages → Build and deployment → Source MUST be "GitHub Actions".
-# If Source is "Deploy from a branch" with folder "/" or "/docs", GitHub serves the raw
-# repo index.html and the browser requests /src/main.tsx → 404.
+# After the first successful run:
+#   Settings → Pages → Build and deployment → Source: "Deploy from a branch"
+#   Branch: gh-pages, Folder: / (root)
+# Do NOT use main + / (root) — that serves the dev index.html and causes /src/main.tsx 404.
+#
+# If the workflow cannot push: Settings → Actions → General → Workflow permissions → Read and write.
 name: Deploy to GitHub Pages
 
 on:
@@ -11,16 +15,14 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
   group: pages
   cancel-in-progress: false
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -34,30 +36,23 @@ jobs:
           NAME="${{ github.event.repository.name }}"
           OWNER="${{ github.repository_owner }}"
           if [ "$NAME" = "${OWNER}.github.io" ]; then
-            echo "User/org site at https://${OWNER}.github.io/ → base /"
+            echo "User/org site → base /"
             echo "VITE_BASE_PATH=/" >> "$GITHUB_ENV"
           else
-            echo "Project site at https://${OWNER}.github.io/${NAME}/ → base /${NAME}/"
+            echo "Project site → base /${NAME}/"
             echo "VITE_BASE_PATH=/${NAME}/" >> "$GITHUB_ENV"
           fi
       - run: npm run build
-      - name: Verify build (must not ship dev index.html)
+      - name: Verify production bundle
         run: |
           if grep -q 'src/main.tsx' dist/index.html; then
             echo "::error::dist/index.html still references /src/main.tsx — the Vite build did not run correctly."
             exit 1
           fi
           echo "OK: dist/index.html uses hashed /assets bundle, not main.tsx"
-      - uses: actions/upload-pages-artifact@v3
+      - name: Push dist to gh-pages branch
+        uses: peaceiris/actions-gh-pages@v4
         with:
-          path: dist
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - uses: actions/deploy-pages@v4
-        id: deployment
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
+          force_orphan: true
