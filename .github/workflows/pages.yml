@@ -1,3 +1,8 @@
+# Serves the Vite build output from ./dist (built index.html references /assets/*.js, NOT /src/main.tsx).
+#
+# In the repo: Settings → Pages → Build and deployment → Source MUST be "GitHub Actions".
+# If Source is "Deploy from a branch" with folder "/" or "/docs", GitHub serves the raw
+# repo index.html and the browser requests /src/main.tsx → 404.
 name: Deploy to GitHub Pages
 
 on:
